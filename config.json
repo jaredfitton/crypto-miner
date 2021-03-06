@@ -1,0 +1,16 @@
+{
+    "time_s": 86400,
+    "hashrate_hs": 10000000000,
+    "coins": [
+        {
+            "name": "Dogecoin",
+            "symbol": "DOGE",
+            "id": "6" 
+        },
+        {
+            "name": "Dash",
+            "symbol": "DASH",
+            "id": "34" 
+        }
+    ]
+}
