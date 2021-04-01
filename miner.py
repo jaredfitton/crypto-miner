@@ -1,54 +1,85 @@
 import requests
 import json
+import sys
+import os
 
-config = json.loads(open("config.json").read())
+from dotenv import load_dotenv
+from formulas import *
+from helpers import *
 
-earnings = []
+def get_lowest_order(algo, market):
+    r = requests.get(f"https://api2.nicehash.com/main/api/v2/public/orders?algorithm={algo}&market={market}")
 
-# Constant Parameters
-hr = config["hashrate_hs"]
-t = config["time_s"]
+    orders_json = json.loads(r.text)
+    orders = orders_json["list"]
 
-for coin in config["coins"]:
-    r = requests.get(f'https://whattomine.com/coins/{coin["id"]}.json')
+    if len(orders) == 0:
+        sys.exit("There are no orders.")
 
-    mining_stats = json.loads(r.text)
+    # Search the current active orders to find the order with the lowest price with active miners (rigsCount)
+    lowest_order = {
+        "price": sys.maxsize
+    }
+    for order in orders:
+        if order["alive"] and order["rigsCount"] > 0 and float(order["price"]) < float(lowest_order["price"]):
+            lowest_order = order
 
-    br = mining_stats["block_reward"]
-    d = mining_stats["difficulty24"]
+    return lowest_order
 
-    coins_per_t = (hr * t * br * 100000) // (2**32 * d) / 100000
+def execute_order(coin):
+    print("Creating order...")
 
-    # print("")
-    # print("Block Reward: " + str(br))
-    # print("Difficulty: " + str(d))
-    # print("Time: " + str(t) + " seconds")
-    # print("Hash Rate: " + str(hr) + " h/s")
+if __name__ == "__main__":
+    config = json.loads(open("config.json").read())
 
-    # print("----------------------------------")
-    # print(f"Coins per {t} seconds: {coins_per_t}")
+    earnings = []
 
-    r = requests.get(f'https://min-api.cryptocompare.com/data/price?fsym={coin["symbol"]}&tsyms=USD,BTC&api_key=a52bbc5bc6968dc2430d817f993c403ede2815915cfdd4e38859631a2233e22f')
+    for coin in config["coins"]:
+        # Calculate the amount of coins earned in the specific amount of time, t
+        coin_earnings = get_coin_earnings(coin)
 
-    eth_conversion = json.loads(r.text)
-    revenue_usd = eth_conversion["USD"] * coins_per_t
-    revenue_btc = eth_conversion["BTC"] * coins_per_t
+        amount = coin["nicehash"]["order_cost"] - coin["nicehash"]["fee"]
+        limit = coin["nicehash"]["limit"]
+        lowest_order = get_lowest_order(coin["nicehash"]["algo"], coin["nicehash"]["market"])
+        price = float(lowest_order["price"])
 
-    earnings.append([coin["name"], coin["symbol"], coins_per_t, revenue_btc, revenue_usd])
+        mining_duration = amount * 24 / (price * limit)
+        revenue = mining_duration * float(coin_earnings["rev_btc"])
+        profit = (revenue - coin["nicehash"]["order_cost"])*(1-coin["misc_fee_percent"])
+        roi = profit / coin["nicehash"]["order_cost"] * 100
 
-    # print("Revenue (USD): " + str(revenue_usd))
-    # print("Revenue (BTC): " + str(revenue_btc))
+        earnings.append([coin["name"], coin["symbol"], mining_duration, revenue, profit, roi])
 
+    print_earnings_table(earnings)
 
+    while(True):
+        selection = input("Enter 'quit' or the id of the coin you would like to create an order for: ")
+        print("")
 
-# Print all of the coin earnings in a table format
+        if selection == "quit":
+            os._exit(0)
+
+        try:
+            id = int(selection)
+        except:
+            print(f"{selection} is not a number, try again\n")
+            continue
+
+        if id < 0 or id > len(earnings)-1:
+            print(f"{selection} is not a valid ID, try again\n")
+            continue
+        
+        confirmation = input(f"Are you sure you want to create an order for {earnings[id][0]}? (y/n): ")
+        print("")
+
+        if confirmation == "y":
+            execute_order(earnings[id])
+            break
+        elif confirmation == "n":
+            continue
+        else:
+            print("Invalid input, try again\n")
+
 print("\n")
-print(f"Time (seconds): {t}")
-print(f"Hashrate (h/s): {hr}")
-print("\n")
-print("{:<12} {:<10} {:<15} {:<10} {:<15}".format('Name','Symbol','Coins Earned','Rev. BTC', 'Rev. USD'))
-for coin in earnings:
-    print("{:<12} {:<10} {:<15} {:<10} {:<15}".format(coin[0], coin[1], round(coin[2], 9), round(coin[3], 6), round(coin[4], 3)))
 
-# Final print to separate last output from command line prompt
-print("\n")
+

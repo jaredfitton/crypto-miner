@@ -1,16 +1,46 @@
 {
-    "time_s": 86400,
-    "hashrate_hs": 10000000000,
     "coins": [
         {
-            "name": "Dogecoin",
-            "symbol": "DOGE",
-            "id": "6" 
+            "name": "MimbleWimbleCoin",
+            "symbol": "MWC",
+            "website": {
+                "url": "https://whattomine.com/coins/323-mwc-cuckatoo31",
+                "name": "whattomine",
+                "config": {
+                    "hr": 20,
+                    "hr_units": "h/s"
+                }
+            },
+            "nicehash": {
+                "order_cost": 0.001,
+                "fee": 0,
+                "time": 86400,
+                "limit": 0.02,
+                "market": "EU",
+                "algo": "GRINCUCKATOO31"
+            },
+            "misc_fee_percent": 0
         },
         {
             "name": "Dash",
             "symbol": "DASH",
-            "id": "34" 
+            "website": {
+                "url": "https://whattomine.com/coins/34-dash-x11",
+                "name": "whattomine",
+                "config": {
+                    "hr": 1000000,
+                    "hr_units": "Mh/s"
+                }
+            },
+            "nicehash": {
+                "order_cost": 0.001,
+                "fee": 0,
+                "time": 86400,
+                "limit": 0.001,
+                "market": "EU",
+                "algo": "X11"
+            },
+            "misc_fee_percent": 0
         }
     ]
 }
